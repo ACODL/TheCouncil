@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getMonthKey } from "@/lib/dates";
+
 import Board from "@/components/Board";
 
 export default async function Home() {

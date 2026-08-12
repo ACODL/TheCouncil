@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { copy } from "@/lib/theme";
+import Sisyphus from "@/components/art/Sisyphus";
 
 export default function LoginPage() {
     const [supabase] = useState(() => createClient());
@@ -25,6 +26,8 @@ export default function LoginPage() {
 
     return (
         <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-6">
+            <Sisyphus width={180} className="mb-10 text-ink" />
+
             <h1 className="text-lg font-medium">{copy.title}</h1>
             <p className="mt-1 mb-8 text-sm text-mid">
                 Sign in to see what everyone said they&apos;d do.
