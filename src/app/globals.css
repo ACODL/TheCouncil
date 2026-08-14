@@ -1,15 +1,17 @@
 @import "tailwindcss";
 
 @theme {
-  --color-paper: #FFFFFF;
-  --color-ink: #111111;
-  --color-mid: #6B6B6B;
-  --color-faint: #E4E4E4;
+  --color-paper: #2A1508;
+  --color-ink: #F5E6D3;
+  --color-mid: #C09A7A;
+  --color-faint: #5A3A20;
+  --color-ember: #E8873F;
 
   --font-body: var(--font-inter), sans-serif;
   --font-mono: var(--font-space-mono), monospace;
 }
 
 body {
-  @apply bg-paper text-ink font-body antialiased;
+  @apply text-ink font-body antialiased;
+  background: #2A1508;
 }

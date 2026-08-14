@@ -5,6 +5,7 @@ import { copy } from "@/lib/theme";
 import { Page, Tabs } from "./layout/Shell";
 import CurrentSession from "./CurrentSession";
 import ClimbView from "./ClimbView";
+import Climb from "./Climb";
 
 export default function Board({ userId, month, initialProfiles, initialGoals }) {
     const [supabase] = useState(() => createClient());
@@ -62,30 +63,38 @@ export default function Board({ userId, month, initialProfiles, initialGoals }) 
         window.location.href = "/login";
     }
 
+    const mine = goals.filter((g) => g.profile_id === userId);
+    const doneCount = mine.filter((g) => g.done).length;
+
     return (
-        <Page>
-            <div className="flex items-baseline justify-between">
-                <h1 className="text-lg font-medium">{copy.title}</h1>
-                <button onClick={signOut} className="text-xs text-mid hover:text-ink">
-                    Sign out
-                </button>
-            </div>
+        <>
 
-            <Tabs
-                tabs={[["current", copy.tabCurrent], ["history", copy.tabHistory]]}
-                active={view}
-                onChange={setView}
-            />
 
-            {view === "current" ? (
-                <CurrentSession
-                    month={month} profiles={profiles} goals={goals} userId={userId}
-                    draft={draft} setDraft={setDraft} error={error} setError={setError}
-                    onAdd={addGoal} onToggle={toggle} onRemove={remove}
+
+            <Page>
+                <div className="flex items-baseline justify-between">
+                    <h1 className="text-lg font-medium">{copy.title}</h1>
+                    <button onClick={signOut} className="text-xs text-mid hover:text-ink">
+                        Sign out
+                    </button>
+                </div>
+
+                <Tabs
+                    tabs={[["current", copy.tabCurrent], ["history", copy.tabHistory]]}
+                    active={view}
+                    onChange={setView}
                 />
-            ) : (
-                <ClimbView profiles={profiles} />
-            )}
-        </Page>
-    );
+
+                {view === "current" ? (
+                    <CurrentSession
+                        month={month} profiles={profiles} goals={goals} userId={userId}
+                        draft={draft} setDraft={setDraft} error={error} setError={setError}
+                        onAdd={addGoal} onToggle={toggle} onRemove={remove}
+                    />
+                ) : (
+                    <ClimbView profiles={profiles} />
+                )}
+            </Page>
+        </>
+    )
 }
