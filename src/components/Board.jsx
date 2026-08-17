@@ -5,23 +5,26 @@ import { copy } from "@/lib/theme";
 import { Page, Tabs } from "./layout/Shell";
 import CurrentSession from "./CurrentSession";
 import ClimbView from "./ClimbView";
-import Climb from "./Climb";
+import MeetingBar from "./MeetingBar";
 
-export default function Board({ userId, month, initialProfiles, initialGoals }) {
+export default function Board({ userId, month, initialProfiles, initialGoals, initialMeeting }) {
     const [supabase] = useState(() => createClient());
     const [profiles, setProfiles] = useState(initialProfiles);
     const [goals, setGoals] = useState(initialGoals);
     const [view, setView] = useState("current");
     const [draft, setDraft] = useState("");
     const [error, setError] = useState("");
+    const [meeting, setMeeting] = useState(initialMeeting);
 
     const refresh = useCallback(async () => {
-        const [{ data: pr }, { data: gl }] = await Promise.all([
+        const [{ data: pr }, { data: gl }, { data: mt }] = await Promise.all([
             supabase.from("profiles").select("*").order("created_at"),
             supabase.from("goals").select("*").eq("month", month),
+            supabase.from("meetings").select("*").order("meets_at", { ascending: false }).limit(1),
         ]);
         if (pr) setProfiles(pr);
         if (gl) setGoals(gl);
+        if (mt) setMeeting(mt[0] ?? null);
     }, [supabase, month]);
 
     useEffect(() => {
@@ -29,6 +32,7 @@ export default function Board({ userId, month, initialProfiles, initialGoals }) 
             .channel("council-live")
             .on("postgres_changes", { event: "*", schema: "public", table: "goals" }, refresh)
             .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, refresh)
+            .on("postgres_changes", { event: "*", schema: "public", table: "meetings" }, refresh)
             .subscribe();
         return () => { supabase.removeChannel(channel); };
     }, [supabase, refresh]);
@@ -63,6 +67,19 @@ export default function Board({ userId, month, initialProfiles, initialGoals }) 
         window.location.href = "/login";
     }
 
+    async function saveMeeting(iso) {
+        if (meeting) {
+            await supabase.from("meetings").update({ meets_at: iso }).eq("id", meeting.id);
+            setMeeting({ ...meeting, meets_at: iso });
+        } else {
+            const { data } = await supabase
+                .from("meetings")
+                .insert({ meets_at: iso, created_by: userId })
+                .select().single();
+            if (data) setMeeting(data);
+        }
+    }
+
     const mine = goals.filter((g) => g.profile_id === userId);
     const doneCount = mine.filter((g) => g.done).length;
 
@@ -77,6 +94,10 @@ export default function Board({ userId, month, initialProfiles, initialGoals }) 
                     <button onClick={signOut} className="text-xs text-mid hover:text-ink">
                         Sign out
                     </button>
+                </div>
+
+                <div className="mt-6">
+                    <MeetingBar meeting={meeting} onSave={saveMeeting} />
                 </div>
 
                 <Tabs
