@@ -1,28 +1,44 @@
 import { createClient } from "@/lib/supabase/server";
-import { getMonthKey } from "@/lib/dates";
-
+import { activeMeeting } from "@/lib/dates";
 import Board from "@/components/Board";
 
 export default async function Home() {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
-    const month = getMonthKey();
+    const { data: meetings } = await supabase
+        .from("meetings").select("*").order("meets_at", { ascending: true });
 
-    const [{ data: profiles }, { data: goals }, { data: meetings }] = await Promise.all([
+    const current = activeMeeting(meetings ?? []);
+
+    const [{ data: profiles }, { data: goals }] = await Promise.all([
         supabase.from("profiles").select("*").order("created_at"),
-        supabase.from("goals").select("*").eq("month", month),
-        supabase.from("meetings").select("*").order("meets_at", { ascending: false }).limit(1),
+        current
+            ? supabase.from("goals").select("*").eq("meeting_id", current.id)
+            : Promise.resolve({ data: [] }),
     ]);
 
+    // Safety net: if the signup trigger ever missed, create the profile now
+    let list = profiles ?? [];
+    if (user && !list.some((p) => p.id === user.id)) {
+        const name =
+            user.user_metadata?.full_name ||
+            user.user_metadata?.name ||
+            user.email?.split("@")[0] ||
+            "Member";
+        const { data: created } = await supabase
+            .from("profiles")
+            .insert({ id: user.id, display_name: name, color_index: list.length })
+            .select().single();
+        if (created) list = [...list, created];
+    }
 
     return (
         <Board
             userId={user.id}
-            month={month}
-            initialProfiles={profiles ?? []}
+            initialProfiles={list}
             initialGoals={goals ?? []}
-            initialMeeting={meetings?.[0] ?? null}
+            initialMeetings={meetings ?? []}
         />
     );
 }

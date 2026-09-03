@@ -2,30 +2,40 @@
 import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { copy } from "@/lib/theme";
+import { activeMeeting } from "@/lib/dates";
 import { Page, Tabs } from "./layout/Shell";
+import MeetingBar from "./MeetingBar";
 import CurrentSession from "./CurrentSession";
 import ClimbView from "./ClimbView";
-import MeetingBar from "./MeetingBar";
+import MemberAdmin from "./MemberAdmin";
 
-export default function Board({ userId, month, initialProfiles, initialGoals, initialMeeting }) {
+export default function Board({ userId, initialProfiles, initialGoals, initialMeetings }) {
     const [supabase] = useState(() => createClient());
     const [profiles, setProfiles] = useState(initialProfiles);
     const [goals, setGoals] = useState(initialGoals);
+    const [meetings, setMeetings] = useState(initialMeetings);
     const [view, setView] = useState("current");
     const [draft, setDraft] = useState("");
     const [error, setError] = useState("");
-    const [meeting, setMeeting] = useState(initialMeeting);
+
+    const meeting = activeMeeting(meetings);
 
     const refresh = useCallback(async () => {
-        const [{ data: pr }, { data: gl }, { data: mt }] = await Promise.all([
+        const { data: mt } = await supabase
+            .from("meetings").select("*").order("meets_at", { ascending: true });
+        const current = activeMeeting(mt ?? []);
+
+        const [{ data: pr }, { data: gl }] = await Promise.all([
             supabase.from("profiles").select("*").order("created_at"),
-            supabase.from("goals").select("*").eq("month", month),
-            supabase.from("meetings").select("*").order("meets_at", { ascending: false }).limit(1),
+            current
+                ? supabase.from("goals").select("*").eq("meeting_id", current.id)
+                : Promise.resolve({ data: [] }),
         ]);
+
+        if (mt) setMeetings(mt);
         if (pr) setProfiles(pr);
-        if (gl) setGoals(gl);
-        if (mt) setMeeting(mt[0] ?? null);
-    }, [supabase, month]);
+        setGoals(gl ?? []);
+    }, [supabase]);
 
     useEffect(() => {
         const channel = supabase
@@ -37,14 +47,24 @@ export default function Board({ userId, month, initialProfiles, initialGoals, in
         return () => { supabase.removeChannel(channel); };
     }, [supabase, refresh]);
 
+    async function saveMeeting(iso) {
+        if (meeting && new Date(meeting.meets_at).getTime() >= Date.now()) {
+            await supabase.from("meetings").update({ meets_at: iso }).eq("id", meeting.id);
+        } else {
+            await supabase.from("meetings").insert({ meets_at: iso, created_by: userId });
+        }
+        refresh();
+    }
+
     async function addGoal() {
+        if (!meeting) return setError("Set a council date first");
         if (!draft.trim()) return setError("Write a goal first");
         setError("");
         const text = draft.trim();
         setDraft("");
         const { data, error: e } = await supabase
             .from("goals")
-            .insert({ month, profile_id: userId, text, done: false })
+            .insert({ meeting_id: meeting.id, profile_id: userId, text, done: false })
             .select().single();
         if (e) { setError(e.message); setDraft(text); return; }
         setGoals((g) => [...g, data]);
@@ -67,55 +87,39 @@ export default function Board({ userId, month, initialProfiles, initialGoals, in
         window.location.href = "/login";
     }
 
-    async function saveMeeting(iso) {
-        if (meeting) {
-            await supabase.from("meetings").update({ meets_at: iso }).eq("id", meeting.id);
-            setMeeting({ ...meeting, meets_at: iso });
-        } else {
-            const { data } = await supabase
-                .from("meetings")
-                .insert({ meets_at: iso, created_by: userId })
-                .select().single();
-            if (data) setMeeting(data);
-        }
-    }
-
-    const mine = goals.filter((g) => g.profile_id === userId);
-    const doneCount = mine.filter((g) => g.done).length;
-
     return (
-        <>
+        <Page>
+            <div className="flex items-baseline justify-between">
+                <h1 className="text-lg font-medium">{copy.title}</h1>
+                <button onClick={signOut} className="text-xs text-mid hover:text-ink">
+                    Sign out
+                </button>
+            </div>
 
+            <div className="mt-6">
+                <MeetingBar meeting={meeting} onSave={saveMeeting} />
+            </div>
 
+            <Tabs
+                tabs={[["current", copy.tabCurrent], ["history", copy.tabHistory]]}
+                active={view}
+                onChange={setView}
+            />
 
-            <Page>
-                <div className="flex items-baseline justify-between">
-                    <h1 className="text-lg font-medium">{copy.title}</h1>
-                    <button onClick={signOut} className="text-xs text-mid hover:text-ink">
-                        Sign out
-                    </button>
-                </div>
-
-                <div className="mt-6">
-                    <MeetingBar meeting={meeting} onSave={saveMeeting} />
-                </div>
-
-                <Tabs
-                    tabs={[["current", copy.tabCurrent], ["history", copy.tabHistory]]}
-                    active={view}
-                    onChange={setView}
-                />
-
-                {view === "current" ? (
+            {view === "current" ? (
+                <>
                     <CurrentSession
-                        month={month} profiles={profiles} goals={goals} userId={userId}
+                        meeting={meeting} profiles={profiles} goals={goals} userId={userId}
                         draft={draft} setDraft={setDraft} error={error} setError={setError}
                         onAdd={addGoal} onToggle={toggle} onRemove={remove}
                     />
-                ) : (
-                    <ClimbView profiles={profiles} />
-                )}
-            </Page>
-        </>
-    )
+                    <MemberAdmin
+                        profiles={profiles} goals={goals} userId={userId} onChange={refresh}
+                    />
+                </>
+            ) : (
+                <ClimbView profiles={profiles} meetings={meetings} />
+            )}
+        </Page>
+    );
 }

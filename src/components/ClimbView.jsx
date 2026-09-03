@@ -1,27 +1,27 @@
 "use client";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { formatMonthShort } from "@/lib/dates";
+import { formatMeetingShort } from "@/lib/dates";
 import { copy } from "@/lib/theme";
 import { Label } from "./layout/Shell";
 
-export default function ClimbView({ profiles }) {
-    const [byMonth, setByMonth] = useState(null);
+export default function ClimbView({ profiles, meetings }) {
+    const [goals, setGoals] = useState(null);
 
     useEffect(() => {
         (async () => {
             const supabase = createClient();
-            const { data } = await supabase.from("goals").select("*").order("month");
-            const grouped = {};
-            (data ?? []).forEach((g) => { (grouped[g.month] ||= []).push(g); });
-            setByMonth(grouped);
+            const { data } = await supabase.from("goals").select("*");
+            setGoals(data ?? []);
         })();
     }, []);
 
-    if (!byMonth) return <p className="mt-8 text-sm text-mid">Loading…</p>;
+    if (!goals) return <p className="mt-8 text-sm text-mid">Loading…</p>;
 
-    const months = Object.keys(byMonth).sort();
-    if (months.length === 0) {
+    const cycles = [...meetings].sort((a, b) => new Date(a.meets_at) - new Date(b.meets_at));
+    const used = cycles.filter((m) => goals.some((g) => g.meeting_id === m.id));
+
+    if (used.length === 0) {
         return <p className="mt-8 text-sm text-mid">No history yet.</p>;
     }
 
@@ -34,9 +34,9 @@ export default function ClimbView({ profiles }) {
                     <thead>
                         <tr>
                             <th className="pb-2 text-left font-normal text-mid" />
-                            {months.map((m) => (
-                                <th key={m} className="px-2 pb-2 font-mono text-[10px] font-normal text-mid">
-                                    {formatMonthShort(m)}
+                            {used.map((m) => (
+                                <th key={m.id} className="px-2 pb-2 font-mono text-[10px] font-normal text-mid">
+                                    {formatMeetingShort(m.meets_at)}
                                 </th>
                             ))}
                         </tr>
@@ -45,12 +45,14 @@ export default function ClimbView({ profiles }) {
                         {profiles.map((p) => (
                             <tr key={p.id} className="border-t border-faint">
                                 <td className="py-3 pr-4 whitespace-nowrap">{p.display_name}</td>
-                                {months.map((m) => {
-                                    const list = byMonth[m].filter((g) => g.profile_id === p.id);
+                                {used.map((m) => {
+                                    const list = goals.filter(
+                                        (g) => g.meeting_id === m.id && g.profile_id === p.id
+                                    );
                                     const done = list.filter((g) => g.done).length;
                                     const frac = list.length ? done / list.length : null;
                                     return (
-                                        <td key={m} className="px-2 py-3 text-center">
+                                        <td key={m.id} className="px-2 py-3 text-center">
                                             {frac === null ? (
                                                 <span className="text-faint">·</span>
                                             ) : (

@@ -1,5 +1,5 @@
 "use client";
-import { formatMonthLong } from "@/lib/dates";
+import { formatMeeting } from "@/lib/dates";
 import { Label, Dot } from "./layout/Shell";
 
 export default function CurrentSession({
@@ -8,7 +8,9 @@ export default function CurrentSession({
 }) {
     return (
         <div className="mt-8">
-            <Label>{formatMonthLong(month)}</Label>
+            <Label>
+                {formatMeeting ? `Cycle ending ${formatMeeting(formatMeeting.meets_at)}` : "No council scheduled"}
+            </Label>
 
             <div className="mt-6 space-y-8">
                 {profiles.map((p) => {
