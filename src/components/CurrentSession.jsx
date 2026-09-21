@@ -1,20 +1,23 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { formatMeeting } from "@/lib/dates";
-import { Label, Dot } from "./layout/Shell";
+import { Label } from "./layout/Shell";
+import GoalDot from "./GoalDot";
 import GoalSubsections from "./GoalSubsections";
 import GoalActions from "./GoalActions";
 
 export default function CurrentSession({
-    month, profiles, goals, userId,
-    draft, setDraft, error, setError, onAdd, onToggle, onRemove,
+    meeting, profiles, goals, userId,
+    draft, setDraft, error, setError, onAdd, onToggle, onRemove, onEditGoal,
 }) {
     const [addingGoal, setAddingGoal] = useState(null);
+    const [editingGoal, setEditingGoal] = useState(null);
+    const editInputRef = useRef(null);
 
     return (
         <div className="mt-8">
             <Label>
-                {formatMeeting ? `Cycle ending ${formatMeeting(formatMeeting.meets_at)}` : "No council scheduled"}
+                {meeting ? `Cycle ending ${formatMeeting(meeting.meets_at)}` : "No council scheduled"}
             </Label>
 
             <div className="mt-6 space-y-8">
@@ -50,13 +53,48 @@ export default function CurrentSession({
                                                     aria-label={g.done ? "Mark as not done" : "Mark as done"}
                                                     className={mine ? "cursor-pointer" : "cursor-default"}
                                                 >
-                                                    <Dot done={g.done} />
+                                                    <GoalDot
+                                                        done={g.done}
+                                                        total={g.subsection_total}
+                                                        completed={g.subsection_done}
+                                                    />
                                                 </button>
-                                                <span className={`flex-1 text-sm ${g.done ? "text-mid line-through" : ""}`}>
-                                                    {g.text}
-                                                </span>
+                                                {editingGoal === g.id ? (
+                                                    <div className="flex flex-1 items-center gap-2 border-b border-ink">
+                                                        <input
+                                                            ref={editInputRef}
+                                                            autoFocus
+                                                            defaultValue={g.text}
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === "Enter") e.currentTarget.blur();
+                                                                if (e.key === "Escape") {
+                                                                    e.currentTarget.value = g.text;
+                                                                    e.currentTarget.blur();
+                                                                }
+                                                            }}
+                                                            onBlur={(e) => {
+                                                                const value = e.currentTarget.value.trim();
+                                                                if (value && value !== g.text) onEditGoal(g, value);
+                                                                setEditingGoal(null);
+                                                            }}
+                                                            className="flex-1 bg-transparent text-sm outline-none"
+                                                        />
+                                                        <button
+                                                            onClick={() => editInputRef.current?.blur()}
+                                                            aria-label="Save edit"
+                                                            className="shrink-0 text-faint transition-colors hover:text-ink"
+                                                        >
+                                                            ✓
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <span className={`flex-1 text-sm ${g.done ? "text-mid line-through" : ""}`}>
+                                                        {g.text}
+                                                    </span>
+                                                )}
                                                 {mine && (
                                                     <GoalActions
+                                                        onEdit={() => setEditingGoal(g.id)}
                                                         onRemove={() => onRemove(g)}
                                                         onAddSubsection={() => setAddingGoal(g.id)}
                                                     />
@@ -75,13 +113,23 @@ export default function CurrentSession({
 
                             {mine && (
                                 <div className="pt-2">
-                                    <input
-                                        value={draft}
-                                        onChange={(e) => { setDraft(e.target.value); setError(""); }}
-                                        onKeyDown={(e) => e.key === "Enter" && onAdd()}
-                                        placeholder="Add a goal…"
-                                        className="w-full border-b border-faint pb-1 text-sm outline-none placeholder:text-mid focus:border-ink"
-                                    />
+                                    <div className="flex items-center gap-2 border-b border-faint pb-1 focus-within:border-ink">
+                                        <input
+                                            value={draft}
+                                            onChange={(e) => { setDraft(e.target.value); setError(""); }}
+                                            onKeyDown={(e) => e.key === "Enter" && onAdd()}
+                                            placeholder="Add a goal…"
+                                            className="flex-1 bg-transparent text-sm outline-none placeholder:text-mid"
+                                        />
+                                        <button
+                                            onClick={onAdd}
+                                            disabled={!draft.trim()}
+                                            aria-label="Add goal"
+                                            className="shrink-0 text-faint transition-colors hover:text-ink disabled:pointer-events-none disabled:opacity-30"
+                                        >
+                                            ✓
+                                        </button>
+                                    </div>
 
                                     {error && <p className="pt-1 text-xs text-mid">{error}</p>}
                                 </div>

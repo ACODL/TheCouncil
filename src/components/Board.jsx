@@ -76,6 +76,12 @@ export default function Board({ userId, initialProfiles, initialGoals, initialMe
         if (e) refresh();
     }
 
+    async function editGoal(goal, text) {
+        setGoals((g) => g.map((x) => (x.id === goal.id ? { ...x, text } : x)));
+        const { error: e } = await supabase.from("goals").update({ text }).eq("id", goal.id);
+        if (e) refresh();
+    }
+
     async function remove(goal) {
         setGoals((g) => g.filter((x) => x.id !== goal.id));
         const { error: e } = await supabase.from("goals").delete().eq("id", goal.id);
@@ -111,7 +117,7 @@ export default function Board({ userId, initialProfiles, initialGoals, initialMe
                     <CurrentSession
                         meeting={meeting} profiles={profiles} goals={goals} userId={userId}
                         draft={draft} setDraft={setDraft} error={error} setError={setError}
-                        onAdd={addGoal} onToggle={toggle} onRemove={remove}
+                        onAdd={addGoal} onToggle={toggle} onRemove={remove} onEditGoal={editGoal}
                     />
                     <MemberAdmin
                         profiles={profiles} goals={goals} userId={userId} onChange={refresh}
