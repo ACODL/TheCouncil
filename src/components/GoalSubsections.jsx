@@ -1,13 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Dot } from './layout/Shell'
 
-export default function GoalSubsections({ goalId, isOwner }) {
+export default function GoalSubsections({ goalId, isOwner, showAddForm, onAddFormClose }) {
     const [subsections, setSubsections] = useState([])
     const [newText, setNewText] = useState('')
     const [loading, setLoading] = useState(true)
+    const inputRef = useRef(null)
 
     useEffect(() => {
         let active = true
@@ -29,6 +29,10 @@ export default function GoalSubsections({ goalId, isOwner }) {
             active = false
         }
     }, [goalId])
+
+    useEffect(() => {
+        if (showAddForm) inputRef.current?.focus()
+    }, [showAddForm])
 
     async function addSubsection(e) {
         e.preventDefault()
@@ -74,29 +78,40 @@ export default function GoalSubsections({ goalId, isOwner }) {
         }
     }
 
-    if (loading) return null
+    if (loading || (subsections.length === 0 && !showAddForm)) return null
 
     return (
         <div className="ml-4 mt-2 space-y-1 border-l border-faint pl-3">
             {subsections.map((s) => (
                 <div key={s.id} className="flex items-center gap-2">
-                    <button onClick={() => isOwner && toggle(s.id, s.done)} disabled={!isOwner} className={isOwner ? "cursor-pointer" : "cursor-default"}>
-                        <Dot done={s.done} />
-                    </button>
+                    <button
+                        onClick={() => isOwner && toggle(s.id, s.done)}
+                        disabled={!isOwner}
+                        className={`w-2.5 h-2.5 rounded-full border border-ink shrink-0 ${s.done ? 'bg-ink' : 'bg-paper'
+                            }`}
+                        aria-label="Toggle subsection done"
+                    />
                     <span className={`text-sm flex-1 ${s.done ? 'line-through text-mid' : 'text-ink'}`}>{s.text}</span>
                     {isOwner && (
-                        <button onClick={() => remove(s.id)} className="text-faint hover:text-ember text-xs" aria-label="Remove subsection">
+                        <button
+                            onClick={() => remove(s.id)}
+                            className="text-xs text-faint transition hover:text-ember"
+                            aria-label="Remove subsection"
+                        >
                             ×
                         </button>
                     )}
                 </div>
             ))}
 
-            {isOwner && (
+            {isOwner && showAddForm && (
                 <form onSubmit={addSubsection} className="flex items-center gap-2 pt-1">
                     <input
+                        ref={inputRef}
                         value={newText}
                         onChange={(e) => setNewText(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Escape' && onAddFormClose?.()}
+                        onBlur={() => !newText && onAddFormClose?.()}
                         placeholder="Add subsection"
                         className="flex-1 border-b border-faint bg-transparent text-sm py-0.5 focus:outline-none focus:border-ink"
                     />

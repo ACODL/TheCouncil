@@ -1,12 +1,16 @@
 "use client";
+import { useState } from "react";
 import { formatMeeting } from "@/lib/dates";
 import { Label, Dot } from "./layout/Shell";
-import GoalSubsections from './GoalSubsections'
+import GoalSubsections from "./GoalSubsections";
+import GoalActions from "./GoalActions";
 
 export default function CurrentSession({
     month, profiles, goals, userId,
     draft, setDraft, error, setError, onAdd, onToggle, onRemove,
 }) {
+    const [addingGoal, setAddingGoal] = useState(null);
+
     return (
         <div className="mt-8">
             <Label>
@@ -52,15 +56,18 @@ export default function CurrentSession({
                                                     {g.text}
                                                 </span>
                                                 {mine && (
-                                                    <button
-                                                        onClick={() => onRemove(g)}
-                                                        className="text-xs text-mid opacity-0 transition group-hover:opacity-100 hover:text-ink"
-                                                    >
-                                                        remove
-                                                    </button>
+                                                    <GoalActions
+                                                        onRemove={() => onRemove(g)}
+                                                        onAddSubsection={() => setAddingGoal(g.id)}
+                                                    />
                                                 )}
                                             </div>
-                                            <GoalSubsections goalId={g.id} isOwner={mine} />
+                                            <GoalSubsections
+                                                goalId={g.id}
+                                                isOwner={mine}
+                                                showAddForm={addingGoal === g.id}
+                                                onAddFormClose={() => setAddingGoal(null)}
+                                            />
                                         </li>
                                     ))}
                                 </ul>
