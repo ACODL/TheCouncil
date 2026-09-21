@@ -1,5 +1,12 @@
+import TicketModal from "@/components/TicketModal";
+
 export function Page({ children }) {
-    return <main className="mx-auto min-h-screen max-w-2xl px-6 py-12">{children}</main>;
+    return (
+        <main className="mx-auto flex min-h-screen max-w-2xl flex-col px-6 py-12">
+            <div className="flex-1">{children}</div>
+            <Footer />
+        </main>
+    );
 }
 
 export function Label({ children }) {
@@ -20,8 +27,9 @@ export function Tabs({ tabs, active, onChange }) {
                 </button>
             ))}
         </div>
-    );
+    )
 }
+
 
 export function Dot({ done, size = 14 }) {
     return (
@@ -30,5 +38,14 @@ export function Dot({ done, size = 14 }) {
                 }`}
             style={{ width: size, height: size }}
         />
+    );
+}
+
+export function Footer() {
+    return (
+        <footer className="mt-12 flex items-center justify-between text-sm text-mid">
+            <span>© 2026 Council</span>
+            <TicketModal />
+        </footer>
     );
 }
