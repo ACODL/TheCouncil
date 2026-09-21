@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { activeMeeting } from "@/lib/dates";
 import Board from "@/components/Board";
@@ -5,6 +6,10 @@ import Board from "@/components/Board";
 export default async function Home() {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+        redirect("/login");
+    }
 
     const { data: meetings } = await supabase
         .from("meetings").select("*").order("meets_at", { ascending: true });
@@ -20,7 +25,7 @@ export default async function Home() {
 
     // Safety net: if the signup trigger ever missed, create the profile now
     let list = profiles ?? [];
-    if (user && !list.some((p) => p.id === user.id)) {
+    if (!list.some((p) => p.id === user.id)) {
         const name =
             user.user_metadata?.full_name ||
             user.user_metadata?.name ||

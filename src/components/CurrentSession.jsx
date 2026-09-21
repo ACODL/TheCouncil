@@ -1,6 +1,7 @@
 "use client";
 import { formatMeeting } from "@/lib/dates";
 import { Label, Dot } from "./layout/Shell";
+import GoalSubsections from './GoalSubsections'
 
 export default function CurrentSession({
     month, profiles, goals, userId,
@@ -37,26 +38,29 @@ export default function CurrentSession({
                             ) : (
                                 <ul className="pt-2">
                                     {list.map((g) => (
-                                        <li key={g.id} className="group flex items-center gap-3 py-1.5">
-                                            <button
-                                                onClick={() => mine && onToggle(g)}
-                                                disabled={!mine}
-                                                aria-label={g.done ? "Mark as not done" : "Mark as done"}
-                                                className={mine ? "cursor-pointer" : "cursor-default"}
-                                            >
-                                                <Dot done={g.done} />
-                                            </button>
-                                            <span className={`flex-1 text-sm ${g.done ? "text-mid line-through" : ""}`}>
-                                                {g.text}
-                                            </span>
-                                            {mine && (
+                                        <li key={g.id} className="py-1.5">
+                                            <div className="group flex items-center gap-3">
                                                 <button
-                                                    onClick={() => onRemove(g)}
-                                                    className="text-xs text-mid opacity-0 transition group-hover:opacity-100 hover:text-ink"
+                                                    onClick={() => mine && onToggle(g)}
+                                                    disabled={!mine}
+                                                    aria-label={g.done ? "Mark as not done" : "Mark as done"}
+                                                    className={mine ? "cursor-pointer" : "cursor-default"}
                                                 >
-                                                    remove
+                                                    <Dot done={g.done} />
                                                 </button>
-                                            )}
+                                                <span className={`flex-1 text-sm ${g.done ? "text-mid line-through" : ""}`}>
+                                                    {g.text}
+                                                </span>
+                                                {mine && (
+                                                    <button
+                                                        onClick={() => onRemove(g)}
+                                                        className="text-xs text-mid opacity-0 transition group-hover:opacity-100 hover:text-ink"
+                                                    >
+                                                        remove
+                                                    </button>
+                                                )}
+                                            </div>
+                                            <GoalSubsections goalId={g.id} isOwner={mine} />
                                         </li>
                                     ))}
                                 </ul>
@@ -71,6 +75,7 @@ export default function CurrentSession({
                                         placeholder="Add a goal…"
                                         className="w-full border-b border-faint pb-1 text-sm outline-none placeholder:text-mid focus:border-ink"
                                     />
+
                                     {error && <p className="pt-1 text-xs text-mid">{error}</p>}
                                 </div>
                             )}
