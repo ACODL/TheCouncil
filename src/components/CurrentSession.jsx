@@ -48,7 +48,7 @@ export default function CurrentSession({
                                         <li key={g.id} className="py-1.5">
                                             <div className="group flex items-center gap-3">
                                                 <button
-                                                    onClick={() => mine && onToggle(g)}
+                                                    onClick={() => mine && !hasSubsections && onToggle(g)}
                                                     disabled={!mine}
                                                     aria-label={g.done ? "Mark as not done" : "Mark as done"}
                                                     className={mine ? "cursor-pointer" : "cursor-default"}
@@ -109,7 +109,8 @@ export default function CurrentSession({
                                         </li>
                                     ))}
                                 </ul>
-                            )}
+                            )
+                            }
 
                             {mine && (
                                 <div className="pt-2">
@@ -138,6 +139,6 @@ export default function CurrentSession({
                     );
                 })}
             </div>
-        </div>
+        </div >
     );
 }
