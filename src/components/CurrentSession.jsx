@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { formatMeeting } from "@/lib/dates";
 import { Label } from "./layout/Shell";
 import GoalDot from "./GoalDot";
@@ -12,7 +12,25 @@ export default function CurrentSession({
 }) {
     const [addingGoal, setAddingGoal] = useState(null);
     const [editingGoal, setEditingGoal] = useState(null);
+    const [liveCounts, setLiveCounts] = useState({});
     const editInputRef = useRef(null);
+
+    function liveFor(g) {
+        const live = liveCounts[g.id];
+        return {
+            total: live ? live.total : g.subsection_total,
+            done: live ? live.done : g.subsection_done,
+        };
+    }
+
+    function isGoalDone(g) {
+        const { total, done } = liveFor(g);
+        return total > 0 ? done === total : g.done;
+    }
+
+    const handleCountsChange = useCallback((goalId, counts) => {
+        setLiveCounts((prev) => ({ ...prev, [goalId]: counts }));
+    }, []);
 
     return (
         <div className="mt-8">
@@ -24,7 +42,8 @@ export default function CurrentSession({
                 {profiles.map((p) => {
                     const mine = p.id === userId;
                     const list = goals.filter((g) => g.profile_id === p.id);
-                    const done = list.filter((g) => g.done).length;
+                    const done = list.filter((g) => isGoalDone(g)).length;
+
 
                     return (
                         <section key={p.id}>
@@ -44,19 +63,23 @@ export default function CurrentSession({
                                 </p>
                             ) : (
                                 <ul className="pt-2">
-                                    {list.map((g) => (
+                                    {list.map((g) => {
+                                        const { total: subsectionTotal, done: subsectionDone } = liveFor(g);
+                                        const hasSubsections = subsectionTotal > 0;
+                                        const goalDone = isGoalDone(g);
+                                        return (
                                         <li key={g.id} className="py-1.5">
                                             <div className="group flex items-center gap-3">
                                                 <button
                                                     onClick={() => mine && !hasSubsections && onToggle(g)}
-                                                    disabled={!mine}
-                                                    aria-label={g.done ? "Mark as not done" : "Mark as done"}
-                                                    className={mine ? "cursor-pointer" : "cursor-default"}
+                                                    disabled={!mine || hasSubsections}
+                                                    aria-label={goalDone ? "Mark as not done" : "Mark as done"}
+                                                    className={mine && !hasSubsections ? "cursor-pointer" : "cursor-default"}
                                                 >
                                                     <GoalDot
-                                                        done={g.done}
-                                                        total={g.subsection_total}
-                                                        completed={g.subsection_done}
+                                                        done={goalDone}
+                                                        total={subsectionTotal}
+                                                        completed={subsectionDone}
                                                     />
                                                 </button>
                                                 {editingGoal === g.id ? (
@@ -88,7 +111,7 @@ export default function CurrentSession({
                                                         </button>
                                                     </div>
                                                 ) : (
-                                                    <span className={`flex-1 text-sm ${g.done ? "text-mid line-through" : ""}`}>
+                                                    <span className={`flex-1 text-sm ${goalDone ? "text-mid line-through" : ""}`}>
                                                         {g.text}
                                                     </span>
                                                 )}
@@ -105,9 +128,11 @@ export default function CurrentSession({
                                                 isOwner={mine}
                                                 showAddForm={addingGoal === g.id}
                                                 onAddFormClose={() => setAddingGoal(null)}
+                                                onCountsChange={handleCountsChange}
                                             />
                                         </li>
-                                    ))}
+                                        );
+                                    })}
                                 </ul>
                             )
                             }
@@ -119,7 +144,7 @@ export default function CurrentSession({
                                             value={draft}
                                             onChange={(e) => { setDraft(e.target.value); setError(""); }}
                                             onKeyDown={(e) => e.key === "Enter" && onAdd()}
-                                            placeholder="Add a goal…"
+                                            placeholder="Add a goal…" 
                                             className="flex-1 bg-transparent text-sm outline-none placeholder:text-mid"
                                         />
                                         <button

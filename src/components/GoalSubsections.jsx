@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
-export default function GoalSubsections({ goalId, isOwner, showAddForm, onAddFormClose }) {
+export default function GoalSubsections({ goalId, isOwner, showAddForm, onAddFormClose, onCountsChange }) {
     const [subsections, setSubsections] = useState([])
     const [newText, setNewText] = useState('')
     const [loading, setLoading] = useState(true)
@@ -33,6 +33,14 @@ export default function GoalSubsections({ goalId, isOwner, showAddForm, onAddFor
     useEffect(() => {
         if (showAddForm) inputRef.current?.focus()
     }, [showAddForm])
+
+    useEffect(() => {
+        if (loading) return
+        onCountsChange?.(goalId, {
+            total: subsections.length,
+            done: subsections.filter((s) => s.done).length,
+        })
+    }, [subsections, loading, goalId, onCountsChange])
 
     async function addSubsection(e) {
         e.preventDefault()
